@@ -36,24 +36,38 @@ def index():
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
-    
+
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
-        # For now, just return the file path
-        return jsonify({
-            'success': True,
-            'filename': filename,
-            'filepath': filepath
-        })
-    
+
+        try:
+            from ocr import extract_text_regions
+            from vectorize import vectorize_regions
+            from inpaint import inpaint_regions
+            from builder import generate_editable_template
+
+            regions = extract_text_regions(filepath)
+            svg_output = vectorize_regions(filepath, regions)
+            cleaned_image = inpaint_regions(filepath, regions)
+            editable_result = generate_editable_template(cleaned_image, svg_output)
+
+            return jsonify({
+                'success': True,
+                'filename': filename,
+                'editable': editable_result
+            })
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     return jsonify({'error': 'Invalid file type'}), 400
+
 
 @app.route('/health')
 def health_check():
