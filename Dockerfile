@@ -4,6 +4,9 @@ FROM python:3.10-slim
 # Set the working directory in the container
 WORKDIR /app
 
+# Install system dependencies (Add tesseract-ocr here)
+RUN apt-get update && apt-get install -y tesseract-ocr
+
 # Copy all files into the container
 COPY . .
 
